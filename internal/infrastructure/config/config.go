@@ -9,6 +9,46 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	// DefaultConfigFile имя конфигурационного файла по умолчанию
+	DefaultConfigFile = "development"
+	// ConfigsDir директория с конфигурационными файлами
+	ConfigsDir = "configs"
+
+	// DefaultServerReadTimeout таймаут чтения по умолчанию (секунды)
+	DefaultServerReadTimeout = 15
+	// DefaultServerWriteTimeout таймаут записи по умолчанию (секунды)
+	DefaultServerWriteTimeout = 15
+	// DefaultServerIdleTimeout таймаут простоя по умолчанию (секунды)
+	DefaultServerIdleTimeout = 60
+	// DefaultServerShutdownTimeout таймаут завершения работы по умолчанию (секунды)
+	DefaultServerShutdownTimeout = 10
+	// DefaultServerMaxHeaderBytes максимальный размер заголовка по умолчанию (1MB)
+	DefaultServerMaxHeaderBytes = 1 << 20
+	// DefaultServerMaxBodySize максимальный размер тела запроса по умолчанию (10MB)
+	DefaultServerMaxBodySize = 10 * 1024 * 1024
+
+	// MinServerTimeout минимальный таймаут сервера (секунды)
+	MinServerTimeout = 1
+	// MinServerSize минимальный размер в байтах для сервера
+	MinServerSize = 1024
+
+	// MinDatabasePort минимальный порт базы данных
+	MinDatabasePort = 1
+	// MaxDatabasePort максимальный порт базы данных
+	MaxDatabasePort = 65535
+	// DefaultDatabaseMaxOpenConns максимальное количество открытых соединений по умолчанию
+	DefaultDatabaseMaxOpenConns = 25
+	// DefaultDatabaseMaxIdleConns максимальное количество простаивающих соединений по умолчанию
+	DefaultDatabaseMaxIdleConns = 5
+	// DefaultDatabaseConnMaxLifetime время жизни соединения по умолчанию (минуты)
+	DefaultDatabaseConnMaxLifetime = 5
+	// DefaultDatabasePingTimeout таймаут ping по умолчанию (секунды)
+	DefaultDatabasePingTimeout = 5
+	// MinDatabaseTimeout минимальный таймаут базы данных (секунды/минуты)
+	MinDatabaseTimeout = 1
+)
+
 // Config конфигурация приложения
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
@@ -52,9 +92,9 @@ type LoggerConfig struct {
 // CONFIG_FILE определяет имя конфиг-файла (например, development для configs/development.yaml)
 // По умолчанию используется development
 func Load() (*Config, error) {
-	configFile := getEnv("CONFIG_FILE", "development")
+	configFile := getEnv("CONFIG_FILE", DefaultConfigFile)
 
-	configPath := filepath.Join("configs", configFile+".yaml")
+	configPath := filepath.Join(ConfigsDir, configFile+".yaml")
 
 	//nolint:gosec // configPath создается из CONFIG_FILE env var, а не из пользовательского ввода
 	data, err := os.ReadFile(configPath)
@@ -186,41 +226,41 @@ func (c *Config) validateServer() error {
 	}
 
 	if c.Server.ReadTimeout == 0 {
-		c.Server.ReadTimeout = 15
+		c.Server.ReadTimeout = DefaultServerReadTimeout
 	}
 	if c.Server.WriteTimeout == 0 {
-		c.Server.WriteTimeout = 15
+		c.Server.WriteTimeout = DefaultServerWriteTimeout
 	}
 	if c.Server.IdleTimeout == 0 {
-		c.Server.IdleTimeout = 60
+		c.Server.IdleTimeout = DefaultServerIdleTimeout
 	}
 	if c.Server.MaxHeaderBytes == 0 {
-		c.Server.MaxHeaderBytes = 1 << 20
+		c.Server.MaxHeaderBytes = DefaultServerMaxHeaderBytes
 	}
 	if c.Server.MaxBodySize == 0 {
-		c.Server.MaxBodySize = 10 * 1024 * 1024
+		c.Server.MaxBodySize = DefaultServerMaxBodySize
 	}
 	if c.Server.ShutdownTimeout == 0 {
-		c.Server.ShutdownTimeout = 10
+		c.Server.ShutdownTimeout = DefaultServerShutdownTimeout
 	}
 
-	if c.Server.ReadTimeout < 1 {
-		return fmt.Errorf("server read_timeout must be at least 1 second")
+	if c.Server.ReadTimeout < MinServerTimeout {
+		return fmt.Errorf("server read_timeout must be at least %d second", MinServerTimeout)
 	}
-	if c.Server.WriteTimeout < 1 {
-		return fmt.Errorf("server write_timeout must be at least 1 second")
+	if c.Server.WriteTimeout < MinServerTimeout {
+		return fmt.Errorf("server write_timeout must be at least %d second", MinServerTimeout)
 	}
-	if c.Server.IdleTimeout < 1 {
-		return fmt.Errorf("server idle_timeout must be at least 1 second")
+	if c.Server.IdleTimeout < MinServerTimeout {
+		return fmt.Errorf("server idle_timeout must be at least %d second", MinServerTimeout)
 	}
-	if c.Server.MaxHeaderBytes < 1024 {
-		return fmt.Errorf("server max_header_bytes must be at least 1024 bytes")
+	if c.Server.MaxHeaderBytes < MinServerSize {
+		return fmt.Errorf("server max_header_bytes must be at least %d bytes", MinServerSize)
 	}
-	if c.Server.MaxBodySize < 1024 {
-		return fmt.Errorf("server max_body_size must be at least 1024 bytes")
+	if c.Server.MaxBodySize < MinServerSize {
+		return fmt.Errorf("server max_body_size must be at least %d bytes", MinServerSize)
 	}
-	if c.Server.ShutdownTimeout < 1 {
-		return fmt.Errorf("server shutdown_timeout must be at least 1 second")
+	if c.Server.ShutdownTimeout < MinServerTimeout {
+		return fmt.Errorf("server shutdown_timeout must be at least %d second", MinServerTimeout)
 	}
 
 	return nil
@@ -231,8 +271,8 @@ func (c *Config) validateDatabase() error {
 		return fmt.Errorf("database host is required")
 	}
 
-	if c.Database.Port <= 0 || c.Database.Port > 65535 {
-		return fmt.Errorf("database port must be between 1 and 65535")
+	if c.Database.Port < MinDatabasePort || c.Database.Port > MaxDatabasePort {
+		return fmt.Errorf("database port must be between %d and %d", MinDatabasePort, MaxDatabasePort)
 	}
 
 	if c.Database.User == "" {
@@ -244,32 +284,32 @@ func (c *Config) validateDatabase() error {
 	}
 
 	if c.Database.MaxOpenConns == 0 {
-		c.Database.MaxOpenConns = 25
+		c.Database.MaxOpenConns = DefaultDatabaseMaxOpenConns
 	}
 	if c.Database.MaxIdleConns == 0 {
-		c.Database.MaxIdleConns = 5
+		c.Database.MaxIdleConns = DefaultDatabaseMaxIdleConns
 	}
 	if c.Database.ConnMaxLifetime == 0 {
-		c.Database.ConnMaxLifetime = 5
+		c.Database.ConnMaxLifetime = DefaultDatabaseConnMaxLifetime
 	}
 	if c.Database.PingTimeout == 0 {
-		c.Database.PingTimeout = 5
+		c.Database.PingTimeout = DefaultDatabasePingTimeout
 	}
 
-	if c.Database.MaxOpenConns < 1 {
-		return fmt.Errorf("database max_open_conns must be at least 1")
+	if c.Database.MaxOpenConns < MinDatabaseTimeout {
+		return fmt.Errorf("database max_open_conns must be at least %d", MinDatabaseTimeout)
 	}
-	if c.Database.MaxIdleConns < 1 {
-		return fmt.Errorf("database max_idle_conns must be at least 1")
+	if c.Database.MaxIdleConns < MinDatabaseTimeout {
+		return fmt.Errorf("database max_idle_conns must be at least %d", MinDatabaseTimeout)
 	}
 	if c.Database.MaxIdleConns > c.Database.MaxOpenConns {
 		return fmt.Errorf("database max_idle_conns cannot be greater than max_open_conns")
 	}
-	if c.Database.ConnMaxLifetime < 1 {
-		return fmt.Errorf("database conn_max_lifetime must be at least 1 minute")
+	if c.Database.ConnMaxLifetime < MinDatabaseTimeout {
+		return fmt.Errorf("database conn_max_lifetime must be at least %d minute", MinDatabaseTimeout)
 	}
-	if c.Database.PingTimeout < 1 {
-		return fmt.Errorf("database ping_timeout must be at least 1 second")
+	if c.Database.PingTimeout < MinDatabaseTimeout {
+		return fmt.Errorf("database ping_timeout must be at least %d second", MinDatabaseTimeout)
 	}
 
 	return nil

@@ -57,9 +57,9 @@ func Logger(log logger.Logger) func(http.Handler) http.Handler {
 			}
 
 			switch {
-			case wrapped.statusCode >= 500:
+			case wrapped.statusCode >= http.StatusInternalServerError:
 				ctxLog.Error("HTTP request", logFields...)
-			case wrapped.statusCode >= 400:
+			case wrapped.statusCode >= http.StatusBadRequest:
 				ctxLog.Warn("HTTP request", logFields...)
 			default:
 				ctxLog.Info("HTTP request", logFields...)
