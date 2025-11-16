@@ -1,0 +1,77 @@
+services:
+  postgres-e2e:
+    image: postgres:18-alpine
+    container_name: pr-reviewer-db-e2e
+    environment:
+      POSTGRES_USER: ${TEST_DB_USER:-test_user}
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:-test_password}
+      POSTGRES_DB: ${TEST_DB_NAME:-pr_reviewer_e2e}
+    ports:
+      - "${TEST_DB_PORT:-5434}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_DB_USER:-test_user}"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
+    networks:
+      - e2e-network
+
+  migrate-e2e:
+    image: migrate/migrate
+    container_name: pr-reviewer-migrate-e2e
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+    volumes:
+      - ../migrations:/migrations
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://${TEST_DB_USER:-test_user}:${TEST_DB_PASSWORD:-test_password}@postgres-e2e:5432/${TEST_DB_NAME:-pr_reviewer_e2e}?sslmode=disable",
+        "up"
+      ]
+    networks:
+      - e2e-network
+
+  app-e2e:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    networks:
+      - e2e-network
+    container_name: pr-reviewer-app-e2e
+    depends_on:
+      migrate-e2e:
+        condition: service_completed_successfully
+      postgres-e2e:
+        condition: service_healthy
+    environment:
+      CONFIG_FILE: e2e
+      DB_HOST: postgres-e2e
+      DB_PORT: "5432"
+      DB_USER: ${TEST_DB_USER:-test_user}
+      DB_PASSWORD: ${TEST_DB_PASSWORD:-test_password}
+      DB_NAME: ${TEST_DB_NAME:-pr_reviewer_e2e}
+      DB_SSLMODE: disable
+      SERVER_PORT: "8080"
+      SERVER_HOST: 0.0.0.0
+    ports:
+      - "${TEST_SERVER_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-q", "-O", "-", "http://localhost:8080/health"]
+      interval: 3s
+      timeout: 5s
+      start_period: 10s
+      retries: 10
+
+volumes:
+  postgres_e2e_data:
+
+networks:
+  e2e-network:
+    driver: bridge
+
