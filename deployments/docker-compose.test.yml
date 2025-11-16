@@ -1,0 +1,37 @@
+services:
+  postgres-test:
+    image: postgres:18-alpine
+    container_name: pr-reviewer-db-test
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: pr_reviewer_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+  migrate-test:
+    image: migrate/migrate
+    container_name: pr-reviewer-migrate-test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    volumes:
+      - ../migrations:/migrations
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://test_user:test_password@postgres-test:5432/pr_reviewer_test?sslmode=disable",
+        "up"
+      ]
+
+volumes:
+  postgres_test_data:
