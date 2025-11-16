@@ -12,6 +12,7 @@ import (
 func main() {
 	application, err := app.Build()
 	if err != nil {
+		//nolint:gosec
 		_, _ = os.Stderr.WriteString("Failed to build application: " + err.Error() + "\n")
 		panic("Failed to build application: " + err.Error())
 	}
