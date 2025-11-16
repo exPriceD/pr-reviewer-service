@@ -15,6 +15,10 @@ import (
 
 var _ repository.PullRequestRepository = (*Repository)(nil)
 
+const (
+	reviewerParamsCount = 2
+)
+
 type Repository struct {
 	db     *sql.DB
 	getter *trmsql.CtxGetter
@@ -365,9 +369,10 @@ func (r *Repository) insertReviewers(ctx context.Context, prID string, reviewers
 	}
 
 	valueStrings := make([]string, 0, len(reviewers))
-	valueArgs := make([]interface{}, 0, len(reviewers)*2)
+	valueArgs := make([]interface{}, 0, len(reviewers)*reviewerParamsCount)
 	for i, reviewer := range reviewers {
-		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
+		paramOffset := i * reviewerParamsCount
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", paramOffset+1, paramOffset+2))
 		valueArgs = append(valueArgs, prID, reviewer)
 	}
 
