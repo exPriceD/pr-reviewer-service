@@ -52,12 +52,17 @@ func (r *Router) Setup() *chi.Mux {
 	router.Use(chimw.RealIP)
 	router.Use(chimw.NoCache)
 
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodHead {
+			return
+		}
 		//nolint:gosec
 		_, _ = w.Write([]byte("OK"))
 	})
+	router.Method(http.MethodGet, "/health", healthHandler)
+	router.Method(http.MethodHead, "/health", healthHandler)
 
 	r.teamHandler.RegisterRoutes(router)
 	r.userHandler.RegisterRoutes(router)
