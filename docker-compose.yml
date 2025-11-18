@@ -25,7 +25,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ../migrations:/migrations
+      - ./migrations:/migrations
     command:
       [
         "-path",
@@ -39,7 +39,7 @@ services:
 
   app:
     build:
-      context: ..
+      context: .
       dockerfile: deployments/Dockerfile
     container_name: pr-reviewer-service
     depends_on:
@@ -75,4 +75,5 @@ volumes:
 networks:
   pr-reviewer-network:
     driver: bridge
+
 

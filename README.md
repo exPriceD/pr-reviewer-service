@@ -24,7 +24,6 @@ make docker-up
 #### Или напрямую через Docker Compose:
 
 ```bash
-cd deployments
 docker compose up -d
 ```
 
@@ -35,7 +34,7 @@ docker compose up -d
 ```bash
 make docker-down
 # или
-cd deployments && docker compose down
+docker compose down
 ```
 
 Для полной очистки (включая данные):
@@ -43,7 +42,7 @@ cd deployments && docker compose down
 ```bash
 make docker-clean
 # или
-cd deployments && docker compose down -v --remove-orphans
+docker compose down -v --remove-orphans
 ```
 
 ### Локальный запуск
