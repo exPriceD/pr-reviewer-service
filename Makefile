@@ -126,30 +126,30 @@ load-test: k6-install
 
 docker-up:
 	@echo "Запуск Docker Compose..."
-	@cd deployments && docker-compose up -d
+	@docker-compose up -d
 	@echo "Ожидание готовности сервисов..."
 	@echo "Проверьте статус: make docker-ps"
 	@echo "Проверьте логи: make docker-logs"
-	@cd deployments && docker-compose ps
+	@docker-compose ps
 
 docker-down:
 	@echo "Остановка Docker Compose..."
-	@cd deployments && docker-compose down
+	@docker-compose down
 
 docker-restart:
 	@echo "Перезапуск Docker Compose..."
-	@cd deployments && docker-compose restart
+	@docker-compose restart
 
 docker-build:
 	@echo "Пересборка Docker образов..."
-	@cd deployments && docker-compose build --no-cache
+	@docker-compose build --no-cache
 
 docker-logs:
-	@cd deployments && docker-compose logs -f
+	@docker-compose logs -f
 
 docker-ps:
-	@cd deployments && docker-compose ps
+	@docker-compose ps
 
 docker-clean:
 	@echo "Остановка и удаление контейнеров, volumes и сетей..."
-	@cd deployments && docker-compose down -v --remove-orphans
+	@docker-compose down -v --remove-orphans
